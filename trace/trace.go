@@ -127,6 +127,10 @@ type StartOptions struct {
 	// SpanKind represents the kind of a span. If none is set,
 	// SpanKindUnspecified is used.
 	SpanKind int
+
+	// StartTime is used as the start time of the span if provided. Else it will
+	// use time.Now().
+	StartTime time.Time
 }
 
 // StartOption apply changes to StartOptions.
@@ -144,6 +148,13 @@ func WithSpanKind(spanKind int) StartOption {
 func WithSampler(sampler Sampler) StartOption {
 	return func(o *StartOptions) {
 		o.Sampler = sampler
+	}
+}
+
+// WithStartTime sets the span start time.
+func WithStartTime(t time.Time) StartOption {
+	return func(o *StartOptions) {
+		o.StartTime = t
 	}
 }
 
@@ -221,10 +232,13 @@ func startSpanInternal(name string, hasParent bool, parent SpanContext, remotePa
 
 	span.data = &SpanData{
 		SpanContext:     span.spanContext,
-		StartTime:       time.Now(),
+		StartTime:       o.StartTime,
 		SpanKind:        o.SpanKind,
 		Name:            name,
 		HasRemoteParent: remoteParent,
+	}
+	if span.data.StartTime.IsZero() {
+		span.data.StartTime = time.Now()
 	}
 	if hasParent {
 		span.data.ParentSpanID = parent.SpanID
